@@ -1,0 +1,6 @@
+{
+  "name": "Launcher3",
+  "description": "Android 17 Launcher3 x Lawnchair Nightly hybrid: Material You themed icons, smart folders, customizable dock & drawer, gestures, and live system hardware widgets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

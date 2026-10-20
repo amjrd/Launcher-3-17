@@ -1,0 +1,739 @@
+name: Lawnchair 16 - Nothing OS Widgets
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nothing-launcher-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dorg.gradle.daemon=false"
+  ANDROID_HOME: "/usr/local/lib/android/sdk"
+
+jobs:
+  build:
+    name: Build Lawnchair with Nothing OS
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Workflow Repository
+        uses: actions/checkout@v4
+        with:
+          path: project
+
+      - name: Checkout Lawnchair 16-dev
+        uses: actions/checkout@v4
+        with:
+          repository: LawnchairLauncher/lawnchair
+          ref: 16-dev
+          path: lawnchair-src
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Checkout Nothing OS Source
+        uses: actions/checkout@v4
+        with:
+          repository: amjrd/Nathing-os-5
+          ref: main
+          path: nathing-source
+          token: ${{ secrets.GH_PAT || github.token }}
+          fetch-depth: 1
+
+      - name: Checkout n0w Calendar Source
+        uses: actions/checkout@v4
+        with:
+          repository: codewec/n0w
+          ref: main
+          path: n0w-src
+        continue-on-error: true
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "21"
+
+      - name: Accept Android SDK Licenses
+        shell: bash
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses" || true
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses 2>/dev/null || true
+
+      - name: Setup Fixed Persistent Keystore
+        shell: bash
+        run: |
+          mkdir -p ~/.android
+          echo "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" | base64 -d > ~/.android/debug.keystore
+          echo "تم تثبيت مفتاح التوقيع الدائم بنجاح لضمان استقرار التحديثات."
+
+      - name: Configure Gradle Environment
+        shell: bash
+        run: |
+          echo "kotlin.allwarningsaserrors=false" >> lawnchair-src/gradle.properties
+          echo "org.gradle.warning.mode=none" >> lawnchair-src/gradle.properties
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Download Official Nothing NDot-57 Font & Assets
+        shell: bash
+        run: |
+          set -e
+          echo "=== تحميل وتثبيت خط NDot-57 الرسمي لـ Nothing OS ==="
+
+          ASSETS_DIR="lawnchair-src/lawnchair/src/main/assets/fonts"
+          mkdir -p "$ASSETS_DIR"
+
+          curl -sL "https://raw.githubusercontent.com/xeji01/nothingfont/main/Ndot-57.otf" -o "$ASSETS_DIR/ndot57.otf"
+
+          if [ -d "n0w-src/app/src/main/assets" ]; then
+            cp -rn n0w-src/app/src/main/assets/* "$ASSETS_DIR/.." || true
+          fi
+
+      - name: Sync Nothing OS Code
+        shell: bash
+        run: |
+          set -e
+          SRC_BASE="nathing-source/app/src/main"
+          DST_BASE="lawnchair-src/lawnchair/src"
+
+          mkdir -p "$DST_BASE/com/example"
+
+          if [ -d "$SRC_BASE/java/com/example" ]; then
+            cp -rf "$SRC_BASE/java/com/example/"* "$DST_BASE/com/example/"
+          elif [ -d "$SRC_BASE/kotlin/com/example" ]; then
+            cp -rf "$SRC_BASE/kotlin/com/example/"* "$DST_BASE/com/example/"
+          fi
+
+          LAWN_RES="lawnchair-src/lawnchair/res"
+          [ ! -d "$LAWN_RES" ] && LAWN_RES="lawnchair-src/lawnchair/src/main/res"
+
+          if [ -d "$SRC_BASE/res" ] && [ -d "$LAWN_RES" ]; then
+            for rdir in drawable drawable-hdpi drawable-xhdpi drawable-xxhdpi drawable-xxxhdpi font; do
+              if [ -d "$SRC_BASE/res/$rdir" ]; then
+                mkdir -p "$LAWN_RES/$rdir"
+                cp -rn "$SRC_BASE/res/$rdir/"* "$LAWN_RES/$rdir/" || true
+              fi
+            done
+          fi
+
+      - name: Inject Complete Nothing OS Ultimate Suite
+        shell: bash
+        run: |
+          set -e
+          echo "=== حقن حزمة ودجات Nothing OS السبعة الكاملة في Lawnchair ==="
+
+          DST_CODE="lawnchair-src/lawnchair/src/com/example/ui/components"
+          mkdir -p "$DST_CODE"
+
+          cat << 'EOF' > "$DST_CODE/NothingWidgetProviders.kt"
+          package com.example.ui.components
+
+          import android.app.PendingIntent
+          import android.appwidget.AppWidgetManager
+          import android.appwidget.AppWidgetProvider
+          import android.content.Context
+          import android.content.Intent
+          import android.content.IntentFilter
+          import android.graphics.*
+          import android.media.AudioManager
+          import android.os.BatteryManager
+          import android.provider.AlarmClock
+          import android.provider.Settings
+          import android.view.KeyEvent
+          import android.widget.RemoteViews
+          import java.text.SimpleDateFormat
+          import java.util.*
+          import kotlin.math.cos
+          import kotlin.math.sin
+
+          object NothingFontHelper {
+              private var cachedTypeface: Typeface? = null
+
+              fun getNdotFont(context: Context): Typeface {
+                  if (cachedTypeface != null) return cachedTypeface!!
+                  return try {
+                      val tf = Typeface.createFromAsset(context.assets, "fonts/ndot57.otf")
+                      cachedTypeface = tf
+                      tf
+                  } catch (e: Exception) {
+                      Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                  }
+              }
+          }
+
+          /** 1. ساعة Nothing OS النقطية (4x2) */
+          class NothingDigitalClockWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val width = 760; val height = 360
+                      val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, bgPaint)
+                      val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, borderPaint)
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                      val tp = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 125f; textAlign = Paint.Align.CENTER }
+                      canvas.drawText(time, width / 2f, height / 2f + 15f, tp)
+
+                      val date = SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date()).uppercase()
+                      val dp = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 34f; textAlign = Paint.Align.CENTER }
+                      canvas.drawText(date, width / 2f, height / 2f + 95f, dp)
+
+                      val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 2. تقويم وجدول Nothing n0w (4x2) */
+          class NothingCalendarWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val width = 760; val height = 360
+                      val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, bgPaint)
+                      val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, border)
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      val cal = Calendar.getInstance()
+
+                      val day = SimpleDateFormat("dd", Locale.getDefault()).format(cal.time)
+                      val month = SimpleDateFormat("MMMM", Locale.getDefault()).format(cal.time).uppercase()
+                      val week = SimpleDateFormat("EEEE", Locale.getDefault()).format(cal.time).uppercase()
+
+                      canvas.drawText(day, 60f, 160f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 110f })
+                      canvas.drawText(month, 60f, 225f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 32f })
+                      canvas.drawText(week, 60f, 275f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#B3FFFFFF"); textSize = 26f })
+
+                      canvas.drawLine(280f, 40f, 280f, height - 40f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); strokeWidth = 2f })
+
+                      val days = arrayOf("M", "T", "W", "T", "F", "S", "S")
+                      val curDay = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+                      for (i in 0 until 7) {
+                          val x = 320f + i * 58f
+                          if (i == curDay) canvas.drawCircle(x + 12f, 100f, 22f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921") })
+                          canvas.drawText(days[i], x + 12f, 110f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = if (i == curDay) Color.WHITE else Color.parseColor("#80FFFFFF"); textSize = 28f; textAlign = Paint.Align.CENTER })
+                          canvas.drawCircle(x + 12f, 140f, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (i == curDay) Color.WHITE else Color.parseColor("#40FFFFFF") })
+                      }
+                      canvas.drawText("NO UPCOMING EVENTS", 320f, 230f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 30f })
+                      canvas.drawText("• YOU ARE ALL CAUGHT UP", 320f, 275f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 22f })
+
+                      val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_APP_CALENDAR); flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 3. مشغل الموسيقى (Nothing Media Player 4x2) */
+          class NothingMediaWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+
+              override fun onReceive(context: Context, intent: Intent) {
+                  super.onReceive(context, intent)
+                  val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+                  when (intent.action) {
+                      "ACTION_NOTHING_MEDIA_PLAY" -> {
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))
+                      }
+                      "ACTION_NOTHING_MEDIA_NEXT" -> {
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT))
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT))
+                      }
+                      "ACTION_NOTHING_MEDIA_PREV" -> {
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PREVIOUS))
+                          audioManager.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PREVIOUS))
+                      }
+                  }
+              }
+
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val width = 760; val height = 360
+                      val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, bgPaint)
+                      val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, border)
+
+                      // قرص الفينيل الدوار (Nothing Turntable Vinyl)
+                      val vinylCenter = 175f
+                      val vinylY = height / 2f
+                      val vinylRadius = 120f
+                      canvas.drawCircle(vinylCenter, vinylY, vinylRadius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FF151515") })
+                      canvas.drawCircle(vinylCenter, vinylY, vinylRadius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#40FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 2f })
+                      for (r in listOf(40f, 65f, 90f)) {
+                          canvas.drawCircle(vinylCenter, vinylY, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1FFFFFFF"); style = Paint.Style.STROKE; strokeWidth = 1.5f })
+                      }
+                      canvas.drawCircle(vinylCenter, vinylY, 26f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921") })
+                      canvas.drawCircle(vinylCenter, vinylY, 8f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      // تفاصيل المسار الصوتي
+                      canvas.drawText("NOTHING AUDIO", 330f, 130f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 38f })
+                      canvas.drawText("NOW PLAYING", 330f, 175f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 22f })
+
+                      // أزرار التحكم النقطية
+                      val btnPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 42f }
+                      canvas.drawText("⏮", 350f, 265f, btnPaint)
+                      canvas.drawCircle(490f, 252f, 34f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921") })
+                      canvas.drawText("▶", 480f, 265f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; textSize = 36f })
+                      canvas.drawText("⏭", 590f, 265f, btnPaint)
+
+                      // ربط النقر لتشغيل/إيقاف الموسيقى
+                      val playIntent = Intent(context, NothingMediaWidgetProvider::class.java).apply { action = "ACTION_NOTHING_MEDIA_PLAY" }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getBroadcast(context, 10, playIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 4. ودجت سماعات Nothing Ear الذكية (4x2) */
+          class NothingEarbudsWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val width = 760; val height = 360
+                      val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, bgPaint)
+                      val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, width - 10f, height - 10f), 52f, 52f, border)
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      canvas.drawText("NOTHING EAR", 60f, 85f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 32f })
+                      canvas.drawText("• CONNECTED", 60f, 120f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 20f })
+
+                      // 1. اليسار Left
+                      val lx = 140f
+                      canvas.drawCircle(lx, 220f, 55f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1AFFFFFF") })
+                      canvas.drawCircle(lx, 220f, 55f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#40FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f })
+                      canvas.drawCircle(lx, 185f, 6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }) // Left = White
+                      canvas.drawText("85%", lx, 230f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 34f; textAlign = Paint.Align.CENTER })
+                      canvas.drawText("L", lx, 305f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#80FFFFFF"); textSize = 24f; textAlign = Paint.Align.CENTER })
+
+                      // 2. اليمين Right (مع النقطة الحمراء الأصلية لـ Nothing Ear)
+                      val rx = 380f
+                      canvas.drawCircle(rx, 220f, 55f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1AFFFFFF") })
+                      canvas.drawCircle(rx, 220f, 55f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#40FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f })
+                      canvas.drawCircle(rx, 185f, 6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921") }) // Right = Red
+                      canvas.drawText("90%", rx, 230f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 34f; textAlign = Paint.Align.CENTER })
+                      canvas.drawText("R", rx, 305f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#80FFFFFF"); textSize = 24f; textAlign = Paint.Align.CENTER })
+
+                      // 3. العلبة Case
+                      val cx = 620f
+                      canvas.drawRoundRect(RectF(cx - 50f, 170f, cx + 50f, 270f), 28f, 28f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1AFFFFFF") })
+                      canvas.drawRoundRect(RectF(cx - 50f, 170f, cx + 50f, 270f), 28f, 28f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#40FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f })
+                      canvas.drawText("100%", cx, 230f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 32f; textAlign = Paint.Align.CENTER })
+                      canvas.drawText("CASE", cx, 305f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#80FFFFFF"); textSize = 22f; textAlign = Paint.Align.CENTER })
+
+                      val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 11, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 5. ودجت الساعة الذكية (Nothing Smartwatch 2x2) */
+          class NothingWatchWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val size = 420
+                      val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, size - 10f, size - 10f), 52f, 52f, bgPaint)
+                      val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, size - 10f, size - 10f), 52f, 52f, border)
+
+                      val center = size / 2f
+                      val ringRadius = 140f
+                      val totalDots = 20
+                      val filledDots = 16 // 80%
+
+                      for (i in 0 until totalDots) {
+                          val angle = Math.toRadians((i * (360.0 / totalDots) - 90).toDouble())
+                          val dx = center + ringRadius * cos(angle).toFloat()
+                          val dy = center + ringRadius * sin(angle).toFloat()
+                          val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (i < filledDots) Color.parseColor("#D71921") else Color.parseColor("#20FFFFFF") }
+                          canvas.drawCircle(dx, dy, 7.5f, dotPaint)
+                      }
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      canvas.drawText("80%", center, center + 20f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 68f; textAlign = Paint.Align.CENTER })
+                      canvas.drawText("WATCH", center, center + 75f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 24f; textAlign = Paint.Align.CENTER })
+
+                      val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 12, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 6. بطارية الهاتف (2x2) */
+          class NothingBatteryWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateWidget(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val size = 420
+                      val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+
+                      val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") }
+                      canvas.drawRoundRect(RectF(10f, 10f, size - 10f, size - 10f), 52f, 52f, bgPaint)
+                      val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#26FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f }
+                      canvas.drawRoundRect(RectF(10f, 10f, size - 10f, size - 10f), 52f, 52f, border)
+
+                      val batteryStatus = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { filter -> context.applicationContext.registerReceiver(null, filter) }
+                      val level = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: 80
+                      val scale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: 100
+                      val batteryPct = ((level / scale.toFloat()) * 100).toInt()
+
+                      val center = size / 2f
+                      val ringRadius = 140f
+                      val totalDots = 24
+                      val filledDots = (totalDots * (batteryPct / 100f)).toInt()
+
+                      for (i in 0 until totalDots) {
+                          val angle = Math.toRadians((i * (360.0 / totalDots) - 90).toDouble())
+                          val dx = center + ringRadius * cos(angle).toFloat()
+                          val dy = center + ringRadius * sin(angle).toFloat()
+                          val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (i < filledDots) (if (batteryPct <= 20) Color.parseColor("#D71921") else Color.WHITE) else Color.parseColor("#20FFFFFF") }
+                          canvas.drawCircle(dx, dy, 7.5f, dotPaint)
+                      }
+
+                      val font = NothingFontHelper.getNdotFont(context)
+                      canvas.drawText("$batteryPct%", center, center + 22f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.WHITE; textSize = 68f; textAlign = Paint.Align.CENTER })
+                      canvas.drawText("PHONE", center, center + 75f, Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = font; color = Color.parseColor("#D71921"); textSize = 24f; textAlign = Paint.Align.CENTER })
+
+                      val intent = Intent(Intent.ACTION_POWER_USAGE_SUMMARY).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 2, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+
+          /** 7. الساعة التناظرية الفخمة (2x2) */
+          class NothingAnalogClockWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+                  for (id in appWidgetIds) updateAnalog(context, appWidgetManager, id)
+              }
+              companion object {
+                  fun updateAnalog(context: Context, appWidgetManager: AppWidgetManager, id: Int) {
+                      val pkg = context.packageName
+                      val layoutId = context.resources.getIdentifier("widget_nothing_container", "layout", pkg)
+                      val imgId = context.resources.getIdentifier("widget_image_view", "id", pkg)
+                      if (layoutId == 0 || imgId == 0) return
+                      val views = RemoteViews(pkg, layoutId)
+
+                      val size = 420
+                      val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                      val canvas = Canvas(bmp)
+                      val center = size / 2f
+                      val radius = size / 2f - 24f
+
+                      canvas.drawCircle(center, center, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#F50D0D0D") })
+                      canvas.drawCircle(center, center, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#33FFFFFF"); style = Paint.Style.STROKE; strokeWidth = 3f })
+
+                      for (i in 0 until 60) {
+                          val angle = Math.toRadians((i * 6).toDouble())
+                          val dx = center + (radius - 22f) * sin(angle).toFloat()
+                          val dy = center - (radius - 22f) * cos(angle).toFloat()
+                          val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (i == 0) Color.parseColor("#D71921") else if (i % 5 == 0) Color.WHITE else Color.parseColor("#26FFFFFF") }
+                          canvas.drawCircle(dx, dy, if (i % 5 == 0) 5.5f else 2.5f, p)
+                      }
+
+                      val cal = Calendar.getInstance()
+                      val h = cal.get(Calendar.HOUR)
+                      val m = cal.get(Calendar.MINUTE)
+                      val hAngle = Math.toRadians(((h + m / 60f) * 30).toDouble())
+                      val mAngle = Math.toRadians((m * 6).toDouble())
+
+                      canvas.drawLine(center, center, center + 95f * sin(hAngle).toFloat(), center - 95f * cos(hAngle).toFloat(), Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; strokeWidth = 10f; strokeCap = Paint.Cap.ROUND })
+                      canvas.drawLine(center, center, center + 140f * sin(mAngle).toFloat(), center - 140f * cos(mAngle).toFloat(), Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921"); strokeWidth = 6f; strokeCap = Paint.Cap.ROUND })
+                      canvas.drawCircle(center, center, 10f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+                      canvas.drawCircle(center, center, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#D71921") })
+
+                      val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+                      views.setOnClickPendingIntent(imgId, PendingIntent.getActivity(context, 3, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+
+                      views.setImageViewBitmap(imgId, bmp)
+                      appWidgetManager.updateAppWidget(id, views)
+                  }
+              }
+          }
+          EOF
+
+          # 2. إنشاء ملفات الـ XML للودجات
+          LAWN_RES="lawnchair-src/lawnchair/res"
+          [ ! -d "$LAWN_RES" ] && LAWN_RES="lawnchair-src/lawnchair/src/main/res"
+
+          mkdir -p "$LAWN_RES/layout" "$LAWN_RES/xml"
+
+          cat << 'EOF' > "$LAWN_RES/layout/widget_nothing_container.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:padding="2dp">
+              <ImageView
+                  android:id="@+id/widget_image_view"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:scaleType="fitCenter" />
+          </FrameLayout>
+          EOF
+
+          for w in digital_clock calendar media earbuds; do
+            cat << EOF > "$LAWN_RES/xml/nothing_${w}_info.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="240dp"
+              android:minHeight="110dp"
+              android:targetCellWidth="4"
+              android:targetCellHeight="2"
+              android:updatePeriodMillis="60000"
+              android:initialLayout="@layout/widget_nothing_container"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          EOF
+          done
+
+          for w in battery analog_clock watch; do
+            cat << EOF > "$LAWN_RES/xml/nothing_${w}_info.xml"
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="140dp"
+              android:minHeight="140dp"
+              android:targetCellWidth="2"
+              android:targetCellHeight="2"
+              android:updatePeriodMillis="60000"
+              android:initialLayout="@layout/widget_nothing_container"
+              android:resizeMode="horizontal|vertical"
+              android:widgetCategory="home_screen" />
+          EOF
+          done
+
+          # 3. تسجيل الودجات السبعة في AndroidManifest.xml
+          MANIFEST=$(find lawnchair-src/lawnchair -name "AndroidManifest.xml" | head -n 1)
+          if [ -f "$MANIFEST" ]; then
+            python3 -c '
+          import sys
+
+          path = sys.argv[1]
+          with open(path, "r", encoding="utf-8") as f:
+              content = f.read()
+
+          receivers = """
+              <!-- Nothing OS & n0w 7 Ultimate Widgets Suite -->
+              <receiver android:name="com.example.ui.components.NothingDigitalClockWidgetProvider"
+                  android:label="Nothing NDot Clock (4x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_digital_clock_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingCalendarWidgetProvider"
+                  android:label="Nothing n0w Calendar (4x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_calendar_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingMediaWidgetProvider"
+                  android:label="Nothing Media Player (4x2)" android:exported="true">
+                  <intent-filter>
+                      <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                      <action android:name="ACTION_NOTHING_MEDIA_PLAY" />
+                      <action android:name="ACTION_NOTHING_MEDIA_NEXT" />
+                      <action android:name="ACTION_NOTHING_MEDIA_PREV" />
+                  </intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_media_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingEarbudsWidgetProvider"
+                  android:label="Nothing Earbuds Battery (4x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_earbuds_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingWatchWidgetProvider"
+                  android:label="Nothing Smartwatch (2x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_watch_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingBatteryWidgetProvider"
+                  android:label="Nothing Phone Battery (2x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_battery_info" />
+              </receiver>
+
+              <receiver android:name="com.example.ui.components.NothingAnalogClockWidgetProvider"
+                  android:label="Nothing Analog Dial (2x2)" android:exported="true">
+                  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+                  <meta-data android:name="android.appwidget.provider" android:resource="@xml/nothing_analog_clock_info" />
+              </receiver>
+          """
+
+          if "</application>" in content:
+              content = content.replace("</application>", receivers + "\n</application>")
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(content)
+              print("تم حقن ودجات Nothing OS السبعة بنجاح.")
+          ' "$MANIFEST"
+          fi
+
+      - name: Build Launcher APK
+        working-directory: lawnchair-src
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+
+          TASK="assembleLawnWithQuickstepGithubDebug"
+          if ! ./gradlew tasks --all | grep -q "$TASK"; then
+            TASK="assembleLawnWithQuickstepDebug"
+          fi
+          if ! ./gradlew tasks --all | grep -q "$TASK"; then
+            TASK="assembleDebug"
+          fi
+
+          echo "تنفيذ المهمة: $TASK"
+          ./gradlew --no-daemon --stacktrace --console=plain $TASK 2>&1 | tee "$GITHUB_WORKSPACE/build-full.log"
+
+      - name: Prepare Single Direct APK
+        if: success()
+        shell: bash
+        run: |
+          APK_FILE=$(find lawnchair-src -type f -name "*.apk" | head -n 1)
+          if [ -n "$APK_FILE" ]; then
+            echo "Found APK: $APK_FILE"
+            cp "$APK_FILE" "$GITHUB_WORKSPACE/Lawnchair-16-Nothing-Ultimate.apk"
+            echo "Copied to $GITHUB_WORKSPACE/Lawnchair-16-Nothing-Ultimate.apk"
+          else
+            echo "No APK found!"
+            exit 1
+          fi
+
+      - name: Publish Direct APK Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v16.0-nothing-latest
+          name: "Lawnchair 16 - Nothing OS Edition"
+          body: |
+            ### 🚀 تحديث Lawnchair 16 المباشر مع ودجات Nothing OS
+            - **تثبيت مباشر APK** (ملف APK جاهز للتثبيت بنقرة واحدة، بدون الحاجة لفك الضغط من ملف zip).
+            - **توقيع دائم وموحّد** لجميع التحديثات القادمة.
+            
+            > ℹ️ **تنبيه هام للترقية والتحديث**:
+            > إذا كان لديك نسخة `Lawnchair.16.Dev` رسمية مثبتة مسبقاً، يجب إزالة النسخة السابقة **مرة واحدة فقط** لتجنب تعارض شهادة التوقيع (Signature Mismatch) بين النسخة الرسمية ونسخة المطور.
+            > بعد ذلك، ستتمكن من تثبيت أي تحديث مستقبلي فوق هذه النسخة مباشرة كـ **تحديث** وبنقرة واحدة.
+          files: Lawnchair-16-Nothing-Ultimate.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Launcher APK Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lawnchair-16-Nothing-Ultimate-APK
+          path: Lawnchair-16-Nothing-Ultimate.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Build Diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Diagnostics
+          path: build-full.log
+          if-no-files-found: warn
+          retention-days: 14
