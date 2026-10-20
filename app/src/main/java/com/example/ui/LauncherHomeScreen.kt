@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -78,6 +79,7 @@ import com.example.ui.components.AtAGlanceWidget
 import com.example.ui.components.DockView
 import com.example.ui.components.ExpandedFolderDialog
 import com.example.ui.components.FolderIconView
+import com.example.ui.components.IosSideDrawer
 import com.example.ui.components.LauncherSettingsSheet
 import com.example.ui.components.LiveBatterySystemWidget
 import com.example.ui.components.LiveStorageAndRamWidget
@@ -109,6 +111,7 @@ fun LauncherHomeScreen(
     val isDrawerOpen by viewModel.isDrawerOpen.collectAsState()
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
     val isWidgetsPickerOpen by viewModel.isWidgetsPickerOpen.collectAsState()
+    val isSideMenuOpen by viewModel.isSideMenuOpen.collectAsState()
     val selectedAppForMenu by viewModel.selectedAppForMenu.collectAsState()
     val stickyNoteContent by viewModel.stickyNoteContent.collectAsState()
 
@@ -132,8 +135,9 @@ fun LauncherHomeScreen(
         homePages[pagerState.currentPage].any { it.packageName == app.info.packageName }
     } ?: false
 
-    BackHandler(enabled = isDrawerOpen || isSettingsOpen || isWidgetsPickerOpen || selectedAppForMenu != null || activeFolder != null) {
+    BackHandler(enabled = isSideMenuOpen || isDrawerOpen || isSettingsOpen || isWidgetsPickerOpen || selectedAppForMenu != null || activeFolder != null) {
         when {
+            isSideMenuOpen -> viewModel.closeSideMenu()
             activeFolder != null -> viewModel.closeFolder()
             selectedAppForMenu != null -> viewModel.clearAppMenu()
             isDrawerOpen -> viewModel.closeDrawer()
@@ -170,6 +174,47 @@ fun LauncherHomeScreen(
                     orientation = Orientation.Vertical
                 )
         ) {
+            // iOS Top Bar with Menu Button (line.3.horizontal)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(
+                    onClick = { viewModel.openSideMenu() },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.28f))
+                        .testTag("side_menu_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu Latéral",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { viewModel.openSettings() },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.28f))
+                        .testTag("home_settings_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Paramètres",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
             // Default Home Launcher Banner
             if (!settings.isDefaultLauncherPromptDismissed) {
                 Card(
@@ -500,6 +545,17 @@ fun LauncherHomeScreen(
                 }
             )
         }
+
+        // 9. iOS Side Drawer Overlay (Menu Latéral - SideDrawerExample)
+        IosSideDrawer(
+            isOpen = isSideMenuOpen,
+            onClose = { viewModel.closeSideMenu() },
+            onOpenSettings = { viewModel.openSettings() },
+            onOpenWidgets = { viewModel.openWidgetsPicker() },
+            onOpenWallpaper = { viewModel.openSettings() },
+            onOpenAppLibrary = { viewModel.openDrawer() },
+            onOpenSearch = { viewModel.openDrawer() }
+        )
     }
 }
 

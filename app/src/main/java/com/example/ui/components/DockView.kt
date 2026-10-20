@@ -1,6 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,16 +79,21 @@ fun DockView(
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Pinned Dock Apps Row
+        // iOS Floating Frosted Glass Dock Container
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(32.dp))
+                .padding(horizontal = 10.dp)
+                .clip(RoundedCornerShape(34.dp))
                 .background(
-                    if (dockBackground) Color.White.copy(alpha = 0.12f)
+                    if (dockBackground) Color.White.copy(alpha = 0.22f)
                     else Color.Transparent
                 )
-                .padding(vertical = if (dockBackground) 6.dp else 0.dp)
+                .border(
+                    BorderStroke(1.2.dp, Color.White.copy(alpha = 0.32f)),
+                    RoundedCornerShape(34.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = if (dockBackground) 10.dp else 2.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -96,10 +103,10 @@ fun DockView(
                 for (app in dockApps) {
                     AppIconView(
                         app = app,
-                        shape = iconShape,
+                        shape = IconShape.SQUIRCLE,
                         themed = themedIcons,
                         showLabel = false,
-                        iconSize = 52.dp,
+                        iconSize = 54.dp,
                         iconScale = iconScale,
                         onClick = { onAppClick(app) },
                         onLongClick = { onAppLongClick(app) }

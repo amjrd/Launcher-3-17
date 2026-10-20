@@ -106,6 +106,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _isWidgetsPickerOpen = MutableStateFlow(false)
     val isWidgetsPickerOpen: StateFlow<Boolean> = _isWidgetsPickerOpen.asStateFlow()
 
+    private val _isSideMenuOpen = MutableStateFlow(false)
+    val isSideMenuOpen: StateFlow<Boolean> = _isSideMenuOpen.asStateFlow()
+
     private val _selectedAppForMenu = MutableStateFlow<InstalledApp?>(null)
     val selectedAppForMenu: StateFlow<InstalledApp?> = _selectedAppForMenu.asStateFlow()
 
@@ -446,6 +449,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun closeWidgetsPicker() {
         _isWidgetsPickerOpen.value = false
+    }
+
+    fun openSideMenu() {
+        _isSideMenuOpen.value = true
+        appManager.triggerHapticFeedback()
+    }
+
+    fun closeSideMenu() {
+        _isSideMenuOpen.value = false
+    }
+
+    fun toggleSideMenu() {
+        _isSideMenuOpen.value = !_isSideMenuOpen.value
+        appManager.triggerHapticFeedback()
     }
 
     fun selectAppForMenu(app: InstalledApp) {

@@ -103,8 +103,11 @@ jobs:
         run: |
           set -e
           SRC_BASE="nathing-source/app/src/main"
-          DST_BASE="lawnchair-src/lawnchair/src"
-
+          LAWN_SRC=$(find lawnchair-src -type d -path "*/src/main/java" -o -path "*/lawnchair/src" 2>/dev/null | grep -v "/build/" | head -n 1)
+          if [ -z "$LAWN_SRC" ]; then
+            LAWN_SRC="lawnchair-src/lawnchair/src"
+          fi
+          DST_BASE="$LAWN_SRC"
           mkdir -p "$DST_BASE/com/example"
 
           if [ -d "$SRC_BASE/java/com/example" ]; then
@@ -113,10 +116,12 @@ jobs:
             cp -rf "$SRC_BASE/kotlin/com/example/"* "$DST_BASE/com/example/"
           fi
 
-          LAWN_RES="lawnchair-src/lawnchair/res"
-          [ ! -d "$LAWN_RES" ] && LAWN_RES="lawnchair-src/lawnchair/src/main/res"
+          LAWN_RES=$(find lawnchair-src -type d -name "res" 2>/dev/null | grep -v "/build/" | head -n 1)
+          if [ -z "$LAWN_RES" ]; then
+            LAWN_RES="lawnchair-src/lawnchair/res"
+          fi
 
-          if [ -d "$SRC_BASE/res" ] && [ -d "$LAWN_RES" ]; then
+          if [ -d "$SRC_BASE/res" ]; then
             for rdir in drawable drawable-hdpi drawable-xhdpi drawable-xxhdpi drawable-xxxhdpi font; do
               if [ -d "$SRC_BASE/res/$rdir" ]; then
                 mkdir -p "$LAWN_RES/$rdir"
@@ -131,7 +136,12 @@ jobs:
           set -e
           echo "=== حقن حزمة ودجات Nothing OS السبعة الكاملة في Lawnchair ==="
 
-          DST_CODE="lawnchair-src/lawnchair/src/com/example/ui/components"
+          LAWN_SRC=$(find lawnchair-src -type d -path "*/src/main/java" -o -path "*/lawnchair/src" 2>/dev/null | grep -v "/build/" | head -n 1)
+          if [ -z "$LAWN_SRC" ]; then
+            LAWN_SRC="lawnchair-src/lawnchair/src"
+          fi
+          DST_CODE="$LAWN_SRC/com/example/ui/components"
+          echo "مسار كود الودجات: $DST_CODE"
           mkdir -p "$DST_CODE"
 
           cat << 'EOF' > "$DST_CODE/NothingWidgetProviders.kt"
@@ -552,9 +562,11 @@ jobs:
           EOF
 
           # 2. إنشاء ملفات الـ XML للودجات
-          LAWN_RES="lawnchair-src/lawnchair/res"
-          [ ! -d "$LAWN_RES" ] && LAWN_RES="lawnchair-src/lawnchair/src/main/res"
-
+          LAWN_RES=$(find lawnchair-src -type d -name "res" 2>/dev/null | grep -v "/build/" | head -n 1)
+          if [ -z "$LAWN_RES" ]; then
+            LAWN_RES="lawnchair-src/lawnchair/res"
+          fi
+          echo "مسار مجلد الموارد المستخدم: $LAWN_RES"
           mkdir -p "$LAWN_RES/layout" "$LAWN_RES/xml"
 
           cat << 'EOF' > "$LAWN_RES/layout/widget_nothing_container.xml"
